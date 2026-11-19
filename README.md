@@ -102,6 +102,14 @@ build, or a PR trigger. It takes roughly 15–20 min, mostly the build.
 | `splash/splash_cold_launch.yaml` | splash, smoke | Fresh install shows the RN splash and its background, then routes to EULA/onboarding (not home) |
 | `splash/splash_relaunch.yaml` | splash | Cold relaunch shows the splash again and lands on the same screen as the first launch |
 | `splash/splash_error_retry.yaml` | splash, offline | Offline launch shows NO CONNECTION / WE HIT A SNAG; TRY AGAIN while offline doesn't crash; on Android it also checks recovery once the network is back |
+| `onboarding/splash_to_home.yaml` | onboarding, smoke | New user: Splash → EULA (Accept) → onboarding (Continue, allow notifications, skip Ticketmaster, Next on NBA ID) → Home tab |
+| `onboarding/returning_user_lands_home.yaml` | onboarding | After finishing onboarding, a cold relaunch goes Splash → Home with no EULA/onboarding |
+| `onboarding/eula_decline.yaml` | onboarding | Declining the EULA shows the "accept to continue" modal and keeps the user on the EULA; accepting afterwards continues to onboarding |
+
+Shared steps in `heat/common/`: `launch_fresh`, `assert_splash_visible`, `assert_left_splash`,
+`accept_eula`, `complete_onboarding` (taps each step's skip/next button, or continue if it has
+none, so CMS changes to the steps don't break it), `allow_notifications_prompt` and `assert_home`.
+No flow signs in to Ticketmaster or NBA ID.
 
 **Offline flow on iOS:** Maestro can't control Simulator networking, so `run.sh` skips
 `offline`-tagged flows on iOS. To run it, turn off the Mac's network and then run

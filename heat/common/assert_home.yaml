@@ -1,0 +1,19 @@
+# Asserts the app is on the Home tab: DFanX chrome with the bottom tab bar, the home
+# header and no EULA/onboarding left on screen.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: "bottom-nav-item-/home"
+    timeout: 30000
+- assertVisible:
+    id: "dfanx-chrome-root"
+- assertVisible:
+    id: "bottom-nav-type-.*"
+- assertVisible:
+    id: "app-header-.*"
+- assertNotVisible:
+    id: "onboarding-root"
+- assertNotVisible:
+    id: "article-viewer"
+- assertNotVisible: "(NO CONNECTION|WE HIT A SNAG)"

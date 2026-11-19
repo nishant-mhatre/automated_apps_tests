@@ -1,0 +1,11 @@
+# Answers the system "send you notifications" permission dialog if it's on screen.
+# Maestro can't pre-grant notifications on iOS, so onboarding triggers the real dialog.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      visible: ".*([Ss]end [Yy]ou [Nn]otifications).*"
+    commands:
+      - tapOn: "Allow"
+      - waitForAnimationToEnd:
+          timeout: 2000

@@ -1,0 +1,47 @@
+# Goes through the DFanX onboarding without signing in to anything:
+#   1. "YOUR ALL-ACCESS PASS AWAITS!"  -> CONTINUE (onboarding-leading-button)
+#      -> system notification prompt -> Allow
+#   2. Ticketmaster sign-in            -> "Skip for Now" (onboarding-trailing-button)
+#   3. NBA ID                          -> NEXT (onboarding-trailing-button)
+# Steps come from the CMS, so rather than hard-coding them each round taps the trailing
+# button when a step has one (skip / next) and the leading one otherwise (continue), until
+# onboarding closes.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-root"
+    timeout: 30000
+- assertVisible:
+    id: "onboarding-page-indicator"
+- takeScreenshot: onboarding_step_1
+
+- repeat:
+    times: 8
+    while:
+      visible:
+        id: "onboarding-root"
+    commands:
+      - runFlow: allow_notifications_prompt.yaml
+
+      - evalScript: ${output.onboardingTap = 'onboarding-leading-button'}
+      - runFlow:
+          when:
+            visible:
+              id: "onboarding-trailing-button"
+          commands:
+            - evalScript: ${output.onboardingTap = 'onboarding-trailing-button'}
+      # The step can disappear while we look (e.g. after the notification prompt), so optional.
+      - tapOn:
+          id: ${output.onboardingTap}
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# The notification prompt can also appear right after the last step.
+- runFlow: allow_notifications_prompt.yaml
+
+- extendedWaitUntil:
+    notVisible:
+      id: "onboarding-root"
+    timeout: 20000

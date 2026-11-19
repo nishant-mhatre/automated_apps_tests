@@ -1,0 +1,20 @@
+# New user, full first-run journey:
+#   Splash -> EULA (Accept) -> Onboarding (continue, allow notifications, skip Ticketmaster,
+#   next on NBA ID) -> Home tab.
+appId: ${APP_ID}
+name: Onboarding - splash to home (new user)
+tags:
+  - onboarding
+  - smoke
+---
+- runFlow: ../common/launch_fresh.yaml
+- runFlow: ../common/assert_splash_visible.yaml
+- runFlow: ../common/assert_left_splash.yaml
+- assertTrue:
+    condition: ${output.landedOn == 'eula'}
+    label: "Fresh install shows the EULA after the splash"
+
+- runFlow: ../common/accept_eula.yaml
+- runFlow: ../common/complete_onboarding.yaml
+- runFlow: ../common/assert_home.yaml
+- takeScreenshot: home_after_onboarding

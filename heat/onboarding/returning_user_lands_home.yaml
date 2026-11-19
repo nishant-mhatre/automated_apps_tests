@@ -1,0 +1,21 @@
+# Once EULA and onboarding are done, a cold relaunch goes Splash -> Home directly.
+appId: ${APP_ID}
+name: Onboarding - returning user goes splash to home
+tags:
+  - onboarding
+---
+- runFlow: ../common/launch_fresh.yaml
+- runFlow: ../common/assert_left_splash.yaml
+- runFlow: ../common/accept_eula.yaml
+- runFlow: ../common/complete_onboarding.yaml
+- runFlow: ../common/assert_home.yaml
+
+# Cold relaunch, keeping app data.
+- launchApp
+- runFlow: ../common/assert_splash_visible.yaml
+- runFlow: ../common/assert_left_splash.yaml
+- assertTrue:
+    condition: ${output.landedOn == 'home'}
+    label: "Returning user skips EULA and onboarding"
+- runFlow: ../common/assert_home.yaml
+- takeScreenshot: home_returning_user

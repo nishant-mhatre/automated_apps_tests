@@ -1,0 +1,19 @@
+# On the DFanX EULA screen ("Terms of Use" article viewer): checks it and taps Accept.
+# Button labels come from the CMS ("Accepts" / "Declines" today), so match loosely.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: "article-viewer"
+    timeout: 30000
+- assertVisible: ".*Terms of Use.*"
+- assertVisible:
+    id: "article-viewer-cta-row-0"
+- assertVisible: "Accept.*"
+- assertVisible: "Decline.*"
+- takeScreenshot: eula
+- tapOn: "Accept.*"
+- extendedWaitUntil:
+    notVisible:
+      id: "article-viewer"
+    timeout: 20000

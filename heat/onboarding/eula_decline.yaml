@@ -1,0 +1,41 @@
+# Declining the EULA shows the "accept to continue" modal and keeps the user on the EULA;
+# accepting afterwards still continues to onboarding.
+appId: ${APP_ID}
+name: Onboarding - declining EULA blocks the app
+tags:
+  - onboarding
+---
+- runFlow: ../common/launch_fresh.yaml
+- runFlow: ../common/assert_left_splash.yaml
+- extendedWaitUntil:
+    visible:
+      id: "article-viewer"
+    timeout: 30000
+
+- tapOn: "Decline.*"
+- extendedWaitUntil:
+    visible:
+      id: "content-modal"
+    timeout: 10000
+- assertVisible:
+    id: "content-modal-title"
+- takeScreenshot: eula_decline_modal
+
+# Dismiss the modal (single CMS-labelled button) -> still on the EULA, not onboarding.
+- tapOn:
+    id: "content-modal-buttons"
+- extendedWaitUntil:
+    notVisible:
+      id: "content-modal"
+    timeout: 10000
+- assertVisible:
+    id: "article-viewer"
+- assertNotVisible:
+    id: "onboarding-root"
+
+# Accepting afterwards continues normally.
+- runFlow: ../common/accept_eula.yaml
+- extendedWaitUntil:
+    visible:
+      id: "onboarding-root"
+    timeout: 20000
