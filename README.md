@@ -39,8 +39,25 @@ scripts/run.sh heat android --include-tags=smoke           # by tag
 DEVICE=<udid|serial> scripts/run.sh heat ios  # pick a specific device
 ```
 
-Reports (JUnit XML, screenshots, screen hierarchies and logs for each step) go to
-`reports/<app>/<platform>/<timestamp>/`.
+## Reports
+
+Every run writes to `reports/<app>/<platform>/<timestamp>/`. `reports/<app>/<platform>/latest`
+always points at the newest run.
+
+```bash
+scripts/run.sh heat ios --open                # HTML report (default), opened in the browser when done
+scripts/run.sh heat android --report junit    # JUnit XML for CI
+open reports/heat/ios/latest/report.html      # reopen the last iOS report
+```
+
+| Option | File | Use for |
+|---|---|---|
+| `--report html` (default) | `report.html` | Reading results: each flow and every step with its status |
+| `--report junit` | `report.xml` | CI test tabs (Bitrise, GitHub Actions, Jenkins) |
+
+The same folder also has, for each flow, `screenshots/` (from `takeScreenshot` and failures),
+`screen-hierarchy/` (the element tree at a failure, useful for finding ids), `commands.json`
+and `logs/maestro.log`.
 
 Open Maestro Studio to inspect elements and try out commands:
 ```bash

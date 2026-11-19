@@ -1,24 +1,41 @@
 #!/usr/bin/env bash
 # Run an app's Maestro flows on iOS or Android.
 #
-#   scripts/run.sh <app> <ios|android> [--env dev|preview|prod] [extra maestro test args...]
+#   scripts/run.sh <app> <ios|android> [--env dev|preview|prod] [--report html|junit] [--open]
+#                  [extra maestro test args...]
+#
+#   --report html   (default) report.html: results with every step, opens in a browser
+#   --report junit  report.xml for CI (Bitrise, GitHub Actions, ...)
+#   --open          open the HTML report when the run finishes
 #
 # Examples:
-#   scripts/run.sh heat ios
-#   scripts/run.sh heat android --env preview
+#   scripts/run.sh heat ios --open
+#   scripts/run.sh heat android --env preview --report junit
 #   scripts/run.sh heat ios --include-tags=offline           # iOS offline flow (network off first)
 #   scripts/run.sh heat android heat/splash/splash_relaunch.yaml
 #
 # Env overrides: DEVICE=<udid|serial> picks the device; OUTPUT_DIR sets the report folder.
 set -euo pipefail
 
-usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 [[ $# -ge 2 ]] || usage
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$1"; PLATFORM="$(echo "$2" | tr '[:upper:]' '[:lower:]')"; shift 2
-ENV_NAME="dev"
-if [[ "${1:-}" == "--env" ]]; then ENV_NAME="$2"; shift 2; fi
+ENV_NAME="dev"; REPORT="html"; OPEN_REPORT=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env)    ENV_NAME="$2"; shift 2 ;;
+    --report) REPORT="$(echo "$2" | tr '[:upper:]' '[:lower:]')"; shift 2 ;;
+    --open)   OPEN_REPORT=1; shift ;;
+    *) break ;;
+  esac
+done
+case "$REPORT" in
+  html)  FORMAT="HTML-DETAILED"; REPORT_FILE="report.html" ;;
+  junit) FORMAT="JUNIT";         REPORT_FILE="report.xml" ;;
+  *) echo "Unknown --report '$REPORT' (use html or junit)"; exit 1 ;;
+esac
 
 APP_DIR="$ROOT/$APP"
 [[ -d "$APP_DIR" ]] || { echo "No app folder: $APP_DIR"; exit 1; }
@@ -59,9 +76,20 @@ OUTPUT_DIR="${OUTPUT_DIR:-$ROOT/reports/$APP/$PLATFORM/$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUTPUT_DIR"
 
 echo "App: $APP ($PLATFORM/$ENV_NAME) id=$APP_ID device=$DEVICE"
-echo "Reports: $OUTPUT_DIR"
-exec maestro --device "$DEVICE" test \
+echo "Artifacts: $OUTPUT_DIR"
+
+STATUS=0
+maestro --device "$DEVICE" test \
   -e APP_ID="$APP_ID" \
-  --format junit --output "$OUTPUT_DIR/report.xml" \
+  --format "$FORMAT" --output "$OUTPUT_DIR/$REPORT_FILE" \
   --test-output-dir "$OUTPUT_DIR" \
-  ${EXTRA[@]+"${EXTRA[@]}"} "$@" ${TARGET[@]+"${TARGET[@]}"}
+  ${EXTRA[@]+"${EXTRA[@]}"} "$@" ${TARGET[@]+"${TARGET[@]}"} || STATUS=$?
+
+# Stable shortcut to the newest run of this app/platform.
+ln -sfn "$OUTPUT_DIR" "$ROOT/reports/$APP/$PLATFORM/latest"
+
+echo "Report: $OUTPUT_DIR/$REPORT_FILE"
+if [[ "$OPEN_REPORT" == 1 && "$REPORT" == "html" && -f "$OUTPUT_DIR/$REPORT_FILE" ]]; then
+  open "$OUTPUT_DIR/$REPORT_FILE"
+fi
+exit "$STATUS"
