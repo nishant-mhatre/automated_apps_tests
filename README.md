@@ -67,19 +67,29 @@ maestro studio
 ## CI (Bitrise)
 
 For Heat iOS, `ci/bitrise/heat-ios-e2e.bitrise.yml` has a ready-to-paste workflow
-(`Dfanx_Heat_E2E_iOS`), with setup instructions at the top. It uses Bitrise's official steps:
+(`Dfanx_Heat_E2E_iOS`), with setup instructions at the top. Its steps:
 
 1. The setup steps of `Dfanx_Heat_dev`, up to "Plist upgrade | Fastlane config". Don't include
    the simulator-stripping steps that `Dfanx_Heat_dev` runs before archiving.
 2. **Xcode Start Simulator**: must be an iOS 18.x runtime while the app is x86_64-only.
-3. **Xcode Build for Simulator** produces `$BITRISE_APP_DIR_PATH`.
-4. **Script** clones this repo (`E2E_TESTS_REPO` / `E2E_TESTS_REF`).
-5. **Maestro Test** with `flow_path: <repo>/heat`, `additional_args: -e APP_ID=…` and
+3. **Script** clones this repo (`E2E_TESTS_REPO` / `E2E_TESTS_REF`).
+4. **Script** `ci/ios/build_for_simulator.sh` removes the device-only frameworks and builds;
+   it exports `$BITRISE_APP_DIR_PATH`.
+5. **Script** `ci/ios/warmup_app.sh` launches the app once.
+6. **Maestro Test** with `flow_path: <repo>/heat`, `additional_args: -e APP_ID=…` and
    `exclude_tags: offline`. It publishes to **Test Reports** and adds a zip of the Maestro output.
-6. **Deploy to Bitrise.io**.
+7. **Deploy to Bitrise.io**.
 
-`ci/bitrise/ios_e2e.sh <app> <App.app>` does the same steps 2, 5 and 6 in a single script
-(create and boot a simulator, install, run, publish). Use it for local CI-style runs or on a CI
+What the Heat iOS simulator build needs, and why:
+
+| Problem | Handled by |
+|---|---|
+| `HeatWayfinding.xcframework` and the Unity export (`UnityFramework`) are device-only | `build_for_simulator.sh --remove-framework …` removes them from the project on the CI machine; `WayfindingView.swift` guards them with `#if canImport` |
+| Bitrise's "Xcode Build for Simulator" step archives without signing, and that app is killed at launch ("Code Signature Invalid") | Plain `xcodebuild build` (ad-hoc signed) in `build_for_simulator.sh` |
+| The app is x86_64-only, and the first launch of a new binary under Rosetta is slow enough to time out the splash | `warmup_app.sh` launches it once; iOS 18.x simulator (iOS 26 can't run x86_64 apps) |
+
+`ci/bitrise/ios_e2e.sh <app> <App.app>` does steps 2, 5, 6 and 7 in a single script
+(create and boot a simulator, warm up, run, publish). Use it for local CI-style runs or on a CI
 other than Bitrise.
 
 Ways to trigger it: a Pipeline that runs it alongside `Dfanx_Heat_dev`, a nightly Scheduled

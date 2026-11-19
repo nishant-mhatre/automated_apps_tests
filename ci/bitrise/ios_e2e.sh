@@ -54,7 +54,8 @@ trap cleanup EXIT
 
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b
-xcrun simctl install "$UDID" "$APP_PATH"
+# Installs the app and launches it once so Rosetta's first-launch translation isn't timed by a flow.
+"$ROOT/ci/ios/warmup_app.sh" "$APP_PATH" "${WARMUP_SECONDS:-60}" "$UDID"
 
 # --- 2. Maestro ----------------------------------------------------------------------
 export PATH="$HOME/.maestro/bin:$PATH"
