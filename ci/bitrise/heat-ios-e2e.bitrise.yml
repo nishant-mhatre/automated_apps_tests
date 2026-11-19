@@ -1,0 +1,91 @@
+# Bitrise workflow: build Heat (dev) for the iOS Simulator and run the Maestro E2E flows
+# from this repo using the official "Maestro Test" step.
+#
+# How to add it (Bitrise -> Heat iOS app -> Workflows -> "bitrise.yml" tab):
+#   1. Paste `Dfanx_Heat_E2E_iOS` under `workflows:` (or build it in the Workflow Editor
+#      with the same steps and inputs).
+#   2. Copy the setup steps of `Dfanx_Heat_dev`, from the top down to and including
+#      "Plist upgrade | Fastlane config", to where the placeholder comment is below.
+#      Better: move those steps into a utility workflow (e.g. `_heat_dev_setup`) and add
+#      `before_run: [_heat_dev_setup]` to both Dfanx_Heat_dev and this workflow.
+#   3. Do NOT copy the steps that come after that: "Remove all the simulator frameworks",
+#      "Strip XCFramework Size", "Strip Pod Framework", "Signin frameworks", Archive and
+#      App Store upload. They remove the simulator slices, so a Simulator build can't run.
+#   4. Use the same Stack (Xcode version) as Dfanx_Heat_dev.
+#
+# Simulator iOS version: Heat excludes arm64 for simulator builds (EXCLUDED_ARCHS in the
+# project and Podfile), so the .app is x86_64-only and runs through Rosetta. iOS 26+
+# simulators can't run x86_64-only apps, so the destination below must use an iOS 18.x
+# (or older) runtime that is installed on the stack. Once arm64 simulator builds work,
+# switch to OS=latest.
+#
+# Results: "Test Reports" tab (each flow with its steps, screenshots and logs) and a zip of
+# the Maestro output in Artifacts.
+
+workflows:
+  Dfanx_Heat_E2E_iOS:
+    summary: Build Heat dev for the iOS Simulator and run Maestro E2E flows
+    steps:
+    # ---------------------------------------------------------------------------
+    # >>> Setup steps from Dfanx_Heat_dev go here (git clone, cache pull,
+    # >>> config plists / DFanX bundle, CocoaPods install, "Plist upgrade | Fastlane config")
+    # ---------------------------------------------------------------------------
+
+    # Boots in the background while the app builds (wait_for_boot_timeout: 0).
+    - xcode-start-simulator@0:
+        inputs:
+        - destination: "$E2E_SIM_DESTINATION"
+
+    - xcode-build-for-simulator@0:
+        title: Build Heat for iOS Simulator
+        inputs:
+        - project_path: Heat2.0/MiamiHeat.xcworkspace
+        - scheme: MiamiHeat
+        - configuration: Debug
+        - destination: generic/platform=iOS Simulator
+
+    - script@1:
+        title: Clone E2E tests repo
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -euo pipefail
+            rm -rf "$E2E_TESTS_DIR"
+            git clone --depth 1 --branch "$E2E_TESTS_REF" "$E2E_TESTS_REPO" "$E2E_TESTS_DIR"
+            git -C "$E2E_TESTS_DIR" log -1 --oneline
+
+    - maestro-test@1:
+        inputs:
+        - flow_path: "$E2E_TESTS_DIR/heat"
+        - app_path: "$BITRISE_APP_DIR_PATH"
+        - test_name: Heat iOS E2E
+        # The flows read their app id from ${APP_ID}.
+        - additional_args: "-e APP_ID=$E2E_APP_ID"
+        # Offline flows need the network turned off by hand on iOS.
+        - exclude_tags: offline
+        - include_tags: "$E2E_INCLUDE_TAGS"
+        # Retry a failed flow once; if it passes the second time it's reported as flaky.
+        - num_flaky_test_attempts: "1"
+        - maestro_version: 2.12.1
+
+    - deploy-to-bitrise-io@2:
+        is_always_run: true
+
+    # Optional: post the result to the team channel (same webhook as Dfanx_Heat_dev).
+    # - slack@4:
+    #     is_always_run: true
+    #     inputs:
+    #     - webhook_url: "$RAWENG_SLACK_WEBHOOK"
+    #     - channel: d-heat
+    #     - text: "Heat iOS E2E passed: ${BITRISE_BUILD_URL}"
+    #     - text_on_error: "Heat iOS E2E FAILED: ${BITRISE_BUILD_URL}"
+
+    envs:
+    - E2E_TESTS_REPO: https://github.com/nishant-mhatre/automated_apps_tests.git
+    - E2E_TESTS_REF: main
+    - E2E_TESTS_DIR: $BITRISE_SOURCE_DIR/../automated_apps_tests
+    - E2E_APP_ID: com.xcosoftware.miamiheat.dev
+    # Must be an iOS 18.x (or older) runtime installed on the stack - see note above.
+    - E2E_SIM_DESTINATION: platform=iOS Simulator,name=iPhone 16 Pro,OS=18.6
+    # Empty = all flows; e.g. "smoke" to run only smoke-tagged flows.
+    - E2E_INCLUDE_TAGS: ""
