@@ -36,7 +36,7 @@ workflows:
         inputs:
         - destination: "$E2E_SIM_DESTINATION"
 
-    - xcode-build-for-simulator@0:
+    - xcode-build-for-simulator@3:
         title: Build Heat for iOS Simulator
         inputs:
         - project_path: Heat2.0/MiamiHeat.xcworkspace
