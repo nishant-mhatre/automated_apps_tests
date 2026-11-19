@@ -1,0 +1,4 @@
+# Maestro workspace for the Miami HEAT app (iOS + Android).
+# Use scripts/run.sh rather than calling maestro directly: it sets APP_ID for the platform.
+flows:
+  - "splash/*"

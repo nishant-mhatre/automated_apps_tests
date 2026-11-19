@@ -1,0 +1,24 @@
+# Fresh-install launch: clears app data and pre-grants permissions so system
+# dialogs don't cover the splash. Permission values differ per platform.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
+          permissions:
+            notifications: allow
+            location: inuse
+
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: true
+          permissions:
+            notifications: allow
+            location: allow

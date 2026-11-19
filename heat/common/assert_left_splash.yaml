@@ -1,0 +1,50 @@
+# Waits for the splash to go away and checks the app landed on a valid next screen,
+# saving it in output.landedOn ('eula' | 'onboarding' | 'home'):
+#   - EULA (DFanX `eula` screen: "Terms of Use", Accepts / Declines) -> EULA not accepted yet
+#   - Onboarding (`onboarding-root`)                                 -> onboarding pending
+#   - Home (`bottom-nav*`)                                           -> returning user
+# "WE HIT A SNAG" is the native config-error screen on both platforms.
+appId: ${APP_ID}
+---
+# Splash leaves once the RN splash has played once and the config API has loaded.
+- extendedWaitUntil:
+    notVisible:
+      id: "splash-screen"
+    timeout: 45000
+
+# iOS App Tracking Transparency prompt, if it shows up.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "Ask App Not to Track"
+          optional: true
+
+- assertNotVisible: "(NO CONNECTION|WE HIT A SNAG)"
+
+- evalScript: ${output.landedOn = ''}
+
+- runFlow:
+    when:
+      visible:
+        id: "onboarding-root"
+    commands:
+      - evalScript: ${output.landedOn = 'onboarding'}
+
+- runFlow:
+    when:
+      visible:
+        id: "bottom-nav.*"
+    commands:
+      - evalScript: ${output.landedOn = 'home'}
+
+- runFlow:
+    when:
+      visible: ".*(Terms|EULA|License Agreement|Privacy).*"
+    commands:
+      - evalScript: ${output.landedOn = 'eula'}
+
+- assertTrue:
+    condition: ${output.landedOn != ''}
+    label: "Left splash and landed on EULA, onboarding or home"

@@ -1,0 +1,60 @@
+# Splash offline / error path. With no network the app shows one of two native screens:
+#   - "NO CONNECTION" (connectivity check fails first; what Android shows)
+#   - "WE HIT A SNAG" (config fetch failed)
+# Both have a TRY AGAIN button that retries and returns to the splash.
+#
+# Android: fully automatic. Maestro turns airplane mode on, then off again for recovery.
+# iOS: Maestro can't change Simulator networking, so turn off the Mac's network first, then:
+#   scripts/run.sh heat ios --include-tags=offline
+# (scripts/run.sh skips this flow on iOS unless `offline` is asked for.)
+appId: ${APP_ID}
+name: Splash - error screen and retry (offline)
+tags:
+  - splash
+  - offline
+onFlowComplete:
+  # Always restore the network, even if the flow fails, so later flows aren't run offline.
+  - runFlow:
+      when:
+        platform: Android
+      commands:
+        - setAirplaneMode: disabled
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setAirplaneMode: enabled
+
+- runFlow: ../common/launch_fresh.yaml
+
+- extendedWaitUntil:
+    visible: "(NO CONNECTION|WE HIT A SNAG)"
+    timeout: 45000
+- assertVisible: "TRY AGAIN"
+- takeScreenshot: splash_offline_screen
+
+# Retrying while still offline should come back to the error screen, without crashing
+# or getting stuck on a blank screen.
+- tapOn: "TRY AGAIN"
+- extendedWaitUntil:
+    visible: "(NO CONNECTION|WE HIT A SNAG)"
+    timeout: 45000
+
+# Android: restore the network and check that retry gets past the splash.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setAirplaneMode: disabled
+      # Reconnecting takes a few seconds, so an early TRY AGAIN can still fail: keep retrying.
+      - retry:
+          maxRetries: 4
+          commands:
+            - tapOn:
+                text: "TRY AGAIN"
+                optional: true
+            - extendedWaitUntil:
+                notVisible: "(NO CONNECTION|WE HIT A SNAG)"
+                timeout: 10000
+      - runFlow: ../common/assert_left_splash.yaml

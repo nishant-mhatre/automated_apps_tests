@@ -1,0 +1,15 @@
+# Asserts the DFanX React Native splash is on screen. Both apps host the same RN
+# splash (iOS SplashScreenView / Android SplashScreen.kt -> DfanxReactHostView), and the
+# testIDs come from the DfanxApp bundle (apps/oneapp/embedded/SplashRoot.tsx).
+appId: ${APP_ID}
+---
+# Generous timeout: on iOS, reading the view hierarchy while the Lottie animation
+# plays is slow (each poll can take several seconds), and a cold RN start adds more.
+- extendedWaitUntil:
+    visible:
+      id: "splash-screen"
+    timeout: 40000
+
+# The background is one of: -lottie (CMS animation), -fallback or -placeholder.
+- assertVisible:
+    id: "splash-screen-background.*"

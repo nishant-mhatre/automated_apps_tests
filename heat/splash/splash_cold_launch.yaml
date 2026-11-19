@@ -1,0 +1,17 @@
+# Fresh install: the splash shows, plays, and hands off to the EULA / onboarding.
+appId: ${APP_ID}
+name: Splash - fresh install cold launch
+tags:
+  - splash
+  - smoke
+---
+- runFlow: ../common/launch_fresh.yaml
+- runFlow: ../common/assert_splash_visible.yaml
+- runFlow: ../common/assert_left_splash.yaml
+
+# A fresh install hasn't accepted the EULA, so it must not go straight to home.
+- assertTrue:
+    condition: ${output.landedOn != 'home'}
+    label: "Fresh install routes to EULA/onboarding, not home"
+
+- takeScreenshot: splash_cold_launch_next_screen

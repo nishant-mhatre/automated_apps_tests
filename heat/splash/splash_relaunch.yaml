@@ -1,0 +1,20 @@
+# Relaunch without clearing state: the splash shows again on every cold start and
+# routes to the same screen as the first launch.
+appId: ${APP_ID}
+name: Splash - relaunch keeps state
+tags:
+  - splash
+---
+- runFlow: ../common/launch_fresh.yaml
+- runFlow: ../common/assert_left_splash.yaml
+- evalScript: ${output.firstLanding = output.landedOn}
+
+# Kill and cold-start again, keeping app data (launchApp stops the running app first).
+- launchApp
+
+- runFlow: ../common/assert_splash_visible.yaml
+- runFlow: ../common/assert_left_splash.yaml
+
+- assertTrue:
+    condition: ${output.landedOn == output.firstLanding}
+    label: "Relaunch routes to the same screen as the first launch"
